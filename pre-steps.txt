@@ -1,0 +1,24 @@
+## Install packages
+
+pip install sentinelhub
+pip install geopandas
+pip install eo-learn
+pip install python-dateutil==2.8.0
+
+## Add support to S5L2
+
+wget https://raw.githubusercontent.com/gok03/eo-learn-5p-support/master/config.json
+wget https://raw.githubusercontent.com/gok03/eo-learn-5p-support/master/constants.py
+rm /home/ec2-user/anaconda3/envs/JupyterSystemEnv/lib/python3.6/site-packages/sentinelhub/config.json
+rm /home/ec2-user/anaconda3/envs/JupyterSystemEnv/lib/python3.6/site-packages/sentinelhub/constants.py
+cp config.json /home/ec2-user/anaconda3/envs/JupyterSystemEnv/lib/python3.6/site-packages/sentinelhub/config.json
+cp constants.py /home/ec2-user/anaconda3/envs/JupyterSystemEnv/lib/python3.6/site-packages/sentinelhub/constants.py
+
+## Create the Notebook
+
+## Clone the support files - In the same directory as Notbook file 
+
+git clone https://github.com/gok03/eo-learn-5p-support.git
+
+
+
