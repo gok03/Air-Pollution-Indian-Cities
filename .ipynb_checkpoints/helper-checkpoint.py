@@ -19,6 +19,11 @@ import io
 
 import os
 import imageio
+
+from matplotlib import pyplot
+import pandas as pd
+
+from IPython.core.display import display, HTML
 #--------------- image helper -----------
 
 ZOOM0_SIZE = 512
@@ -126,6 +131,12 @@ class S5PL2CWCSInput(SentinelHubWCSInput):
 
 # ---------------- plot helper -------------------
 
+aq_values = {"NO2":[[-0.0005, 0.0045, 0.015, 0.02],0.01,"mol/m2"], 
+    "SO2": [[-0.5,0.0593,0.625,2],0.35,"DU"],
+    "O3": [[0,0.0675,0.135,0.27], 0.075, "mol/m2"],
+    "CO": [[0,0.0675,0.135,0.27], 0.05, "mol/m2" ],
+    "AER_AI_354_388": [[-5,-1,1,5],0, "Index Value"]}
+
 def get_bbox(outline):
     dam_nominal = outline.geometry[0]
     inflate_bbox = 0.1
@@ -140,6 +151,18 @@ def get_bbox(outline):
 
     return BBox([minx, miny, maxx, maxy], crs=CRS.WGS84)
 
+def ppm(mpm2):
+    return((mpm2) * (8.314*273.15) * 1000000 / 101300)
+
+def find_quality(satellite_value,component):
+    if(satellite_value>=aq_values[component][0][0] and satellite_value<aq_values[component][0][1]):
+        return 0
+    elif(satellite_value>aq_values[component][0][1] and satellite_value<aq_values[component][0][2]):
+        return 1
+    elif(satellite_value>aq_values[component][0][2] and satellite_value<aq_values[component][0][3]):
+        return 2
+    else:
+        return -1
 
 def plot_with_data(patch_data, component, dam_bbox, idx, plot_size):
     components_to_color = {"O3":"Blues","SO2":"Reds", "CH4":"Greys", "NO2":"YlOrBr", "HCHO":"RdPu", "CO":"Purples", "AER_AI_354_388":"Greens"}
@@ -178,4 +201,46 @@ def plot_with_data_save(patch_data, component, dam_bbox, idx, plot_size,filepath
     plt.savefig(filepath, format='png',transparent = True, bbox_inches = 'tight', pad_inches = 0)
     return(filepath)
 
+def aqi_for_patch(patch):
+    components = ["O3","SO2", "NO2", "CO", "AER_AI_354_388"]
+    calculated_values = {"O3":[],"SO2":[], "NO2":[], "CO":[], "AER_AI_354_388":[]}
+    for i in calculated_values:
+        patch.data[i] = np.nan_to_num(patch.data[i],np.nanmin(patch.data[i]))
+        quality_value_holder = []
+        for j in range(len(patch.timestamp)):
+            quality_value_holder += [find_quality(patch.data[i][j].max(),i)]
+        #calculated_values[i] = [aq_values[i][0][0]]+quality_value_holder+[aq_values[i][0][-1]]
+        calculated_values[i] = [0]+quality_value_holder+[2]
+    calculated_values = [calculated_values[i] for i in calculated_values]
+    timestamp_holder = [patch.timestamp[i].date() for i in range(len(patch.timestamp))]
+    timestamp_holder = [timestamp_holder[0]]+timestamp_holder+[timestamp_holder[-1]]
+    df=pd.DataFrame(data=[*zip(*calculated_values)],
+                    index=timestamp_holder,
+                    columns=components)
+    df.plot(subplots=True,colormap="Set1",figsize=(10,5))
+    pyplot.show()
+    
+def plot_patch_rgb(eopatch, idx):
+    ratio = np.abs(eopatch.bbox.max_x - eopatch.bbox.min_x) / np.abs(eopatch.bbox.max_y - eopatch.bbox.min_y)
+    fig, ax = plt.subplots(figsize=(ratio * 10, 10))
+    
+    ax.imshow(eopatch.data['1_TRUE_COLOR'][idx])
+    ax.axis('off')
+    
+    
+
+
+def aqi_for_patch_for_date(patch,idate):
+    components = {"O3":"Ozone", "SO2":"Sulfur dioxide", "NO2": "Nitrogen dioxide", "CO":"Carbon monoxide", "AER_AI_354_388":"Aerosol"}
+    value_to_text = {0:["Good","green"], 1:["Moderate","yellow"], 2:["Unhealthy","red"]}
+    max_qi_value = 0
+    build_html = "<style> table {width: 100% !important; } </style> <table> <tr> <td>"
+    for i in components:    
+        patch.data[i] = np.nan_to_num(patch.data[i],np.nanmin(patch.data[i]))
+        qi_value = find_quality(patch.data[i][idate].max(),i)
+        max_qi_value = max(max_qi_value,qi_value)
+        build_html += '<div style="background-color: '+value_to_text[qi_value][1]+'; padding: 10px;"><center>'+components[i]+' Concentration is '+value_to_text[qi_value][0]+'</center></div><br/>'
+    build_html += '</td> <td style="background-color: '+value_to_text[max_qi_value][1]+'; padding: 10px;"><center>Overall Air Quality is '+value_to_text[max_qi_value][0]+'</center></div><br/>'
+    display(HTML(build_html))
+    
 # ---------------- plot helper end ---------------

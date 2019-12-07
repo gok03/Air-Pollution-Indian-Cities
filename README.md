@@ -1,2 +1,6 @@
 # Air-Pollution-Indian-Cities
-(In-Development) Air pollution analysis using sentinel 5p Satellite in Indian Cities
+Repo for PyConf Hyderabad talk on Understanding Air pollution using Satellite in Indian Cities.
+
+Slides at : https://slides.com/gokulvasan/understanding-air-pollution-in-indian-cities-using-satellite-imagery/
+
+
