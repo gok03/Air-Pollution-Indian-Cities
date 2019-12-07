@@ -25,6 +25,8 @@ import pandas as pd
 
 from IPython.core.display import display, HTML
 import matplotlib.colors
+
+import datetime
 #--------------- image helper -----------
 
 ZOOM0_SIZE = 512
@@ -214,6 +216,7 @@ def plot_with_data_save(patch_data, component, dam_bbox, idx, plot_size,filepath
     cb = fig.colorbar(im, cax=cax, orientation='vertical')
     ax.axis('off')
     plt.savefig(filepath, format='png',transparent = True, bbox_inches = 'tight', pad_inches = 0)
+    plt.ioff()
     return(filepath)
 
 def aqi_for_patch(patch):
@@ -235,6 +238,27 @@ def aqi_for_patch(patch):
     df.plot(subplots=True,colormap="Set1",figsize=(10,5))
     pyplot.show()
     
+    
+def aqi_for_patch_within_daterange(patch,indexes):
+    components = ["O3","SO2", "NO2", "CO", "AER_AI_354_388"]
+    calculated_values = {"O3":[],"SO2":[], "NO2":[], "CO":[], "AER_AI_354_388":[]}
+    for i in calculated_values:
+        patch.data[i] = np.nan_to_num(patch.data[i],np.nanmin(patch.data[i]))
+        quality_value_holder = []
+        for j in indexes:
+            quality_value_holder += [find_quality(patch.data[i][j].max(),i)]
+        #calculated_values[i] = [aq_values[i][0][0]]+quality_value_holder+[aq_values[i][0][-1]]
+        calculated_values[i] = [0]+quality_value_holder+[2]
+    calculated_values = [calculated_values[i] for i in calculated_values]
+    timestamp_holder = [patch.timestamp[i].date() for i in indexes]
+    timestamp_holder = [timestamp_holder[0]]+timestamp_holder+[timestamp_holder[-1]]
+    df=pd.DataFrame(data=[*zip(*calculated_values)],
+                    index=timestamp_holder,
+                    columns=components)
+    df.plot(subplots=True,colormap="Set1",figsize=(10,5))
+    pyplot.show()
+    
+    
 def plot_patch_rgb(eopatch, idx):
     ratio = np.abs(eopatch.bbox.max_x - eopatch.bbox.min_x) / np.abs(eopatch.bbox.max_y - eopatch.bbox.min_y)
     fig, ax = plt.subplots(figsize=(ratio * 10, 10))
@@ -243,8 +267,6 @@ def plot_patch_rgb(eopatch, idx):
     ax.axis('off')
     
     
-
-
 def aqi_for_patch_for_date(patch,idate):
     components = {"O3":"Ozone", "SO2":"Sulfur dioxide", "NO2": "Nitrogen dioxide", "CO":"Carbon monoxide", "AER_AI_354_388":"Aerosol"}
     value_to_text = {0:["Good","green"], 1:["Moderate","yellow"], 2:["Unhealthy","red"]}
@@ -255,9 +277,28 @@ def aqi_for_patch_for_date(patch,idate):
         qi_value = find_quality(patch.data[i][idate].max(),i)
         max_qi_value = max(max_qi_value,qi_value)
         build_html += '<div style="background-color: '+value_to_text[qi_value][1]+'; padding: 10px;"><center>'+components[i]+' Concentration is '+value_to_text[qi_value][0]+'</center></div><br/>'
-    build_html += '</td> <td style="background-color: '+value_to_text[max_qi_value][1]+'; padding: 10px;"><center>Overall Air Quality is '+value_to_text[max_qi_value][0]+'</center></div><br/>'
+    build_html += '</td> <td style="background-color: '+value_to_text[max_qi_value][1]+'; padding: 10px;"><center><h1>Overall Air Quality is '+value_to_text[max_qi_value][0]+'</h1></center></div><br/>'
     display(HTML(build_html))
     
-    
+def create_gif_for_patch(patch,outline_bbox,i):
+    components = ["O3", "SO2", "NO2", "CO", "AER_AI_354_388"]
+    if not os.path.exists("export_data/"+i+"/"):
+        os.makedirs("export_data/"+i+"/")
+        os.makedirs("export_data/"+i+"/gif/")
+    for j in components:
+        if not os.path.exists("export_data/"+i+"/"):
+            os.makedirs("export_data/"+i+"/")
+        files = []
+        for k in range(len(patch.timestamp)):
+            if not os.path.exists("export_data/"+i+"/"+j+"/"):
+                os.makedirs("export_data/"+i+"/"+j+"/")
+            path = "export_data/"+i+"/"+j+"/"+str(k)+".png"
+            file = plot_with_data_save(patch,j,outline_bbox,k,5,path)
+            files+= [file]
+        images = []
+        for filename in files:
+            images.append(imageio.imread(filename))
+        imageio.mimsave("export_data/"+str(i)+"/gif/"+j+".gif", images,duration=0.5)
+    return("Done!")
 
 # ---------------- plot helper end ---------------
