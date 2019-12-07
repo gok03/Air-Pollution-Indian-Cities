@@ -24,6 +24,7 @@ from matplotlib import pyplot
 import pandas as pd
 
 from IPython.core.display import display, HTML
+import matplotlib.colors
 #--------------- image helper -----------
 
 ZOOM0_SIZE = 512
@@ -175,7 +176,14 @@ def plot_with_data(patch_data, component, dam_bbox, idx, plot_size):
     patch_map = patch_map.resize((int(size[0]), int(size[1])))
     ax.set_title(component +" ~ "+ patch_data.timestamp[idx].strftime("%d/%m/%Y, %H:%M:%S"))
     ax.imshow(patch_map.convert('RGB'))
-    im = ax.imshow(img,cmap=components_to_color[component], alpha=0.5)
+    norm = matplotlib.colors.Normalize(aq_values[component][0][0],aq_values[component][0][-1])
+    colors = [[norm(aq_values[component][0][0]), "green"],
+              [norm(aq_values[component][0][1]), "yellow"],
+              [norm(aq_values[component][0][2]), "red"],
+              [norm(aq_values[component][0][3]), "red"]]
+
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", colors)
+    im = ax.imshow(img,cmap=cmap, alpha=0.5, vmin=aq_values[component][0][0], vmax=aq_values[component][0][3])
     
     cax = fig.add_axes([0.90,0.15,0.02,0.70])
     cb = fig.colorbar(im, cax=cax, orientation='vertical')
@@ -193,7 +201,14 @@ def plot_with_data_save(patch_data, component, dam_bbox, idx, plot_size,filepath
     patch_map = patch_map.resize((int(size[0]), int(size[1])))
     ax.set_title(component +" ~ "+ patch_data.timestamp[idx].strftime("%d/%m/%Y, %H:%M:%S"))
     ax.imshow(patch_map.convert('RGB'))
-    im = ax.imshow(img,cmap=components_to_color[component], alpha=0.5)
+    norm = matplotlib.colors.Normalize(aq_values[component][0][0],aq_values[component][0][-1])
+    colors = [[norm(aq_values[component][0][0]), "green"],
+              [norm(aq_values[component][0][1]), "yellow"],
+              [norm(aq_values[component][0][2]), "red"],
+              [norm(aq_values[component][0][3]), "red"]]
+
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", colors)
+    im = ax.imshow(img,cmap=cmap, alpha=0.5, vmin=aq_values[component][0][0], vmax=aq_values[component][0][3])
     
     cax = fig.add_axes([0.90,0.15,0.02,0.70])
     cb = fig.colorbar(im, cax=cax, orientation='vertical')
@@ -243,4 +258,6 @@ def aqi_for_patch_for_date(patch,idate):
     build_html += '</td> <td style="background-color: '+value_to_text[max_qi_value][1]+'; padding: 10px;"><center>Overall Air Quality is '+value_to_text[max_qi_value][0]+'</center></div><br/>'
     display(HTML(build_html))
     
+    
+
 # ---------------- plot helper end ---------------
